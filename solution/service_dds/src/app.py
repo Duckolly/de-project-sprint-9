@@ -10,16 +10,16 @@ app = Flask(__name__)
 
 config = AppConfig()
 
-
-@app.get('/health')
-def hello_world():
-    return 'healthy'
-
-
 if __name__ == '__main__':
     app.logger.setLevel(logging.DEBUG)
 
+    migrator = DdsMigrator(config.pg_warehouse_db())
+    migrator.up()
+
     proc = DdsMessageProcessor(
+        config.kafka_consumer(),
+        config.kafka_producer(),
+        DdsRepository(config.pg_warehouse_db()),
         app.logger
     )
 
