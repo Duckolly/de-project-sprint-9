@@ -1,6 +1,5 @@
 from datetime import datetime
-
-from lib.pg.pg_connect import PgConnect
+from lib.pg import PgConnect
 
 class StgRepository:
     def __init__(self, db: PgConnect) -> None:
@@ -17,13 +16,12 @@ class StgRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                        INSERT INTO stg.order_events(object_id, object_type, sent_dttm, payload)
-                        VALUES (%(object_id)s, %(object_type)s, %(sent_dttm)s, %(payload)s
-                        ON CONFLICT (object_id)
-                        DO 
-                            UPDATE set object_type = EXCLUDED.object_type
-                                       sent_dttm = EXCLUDED.sent_dttm
-                                       payload = EXCLUDED.payload
+                        INSERT INTO stg.order_events (object_id, object_type, sent_dttm, payload)
+                        VALUES (%(object_id)s, %(object_type)s, %(sent_dttm)s, %(payload)s)
+                        ON CONFLICT(object_id) DO UPDATE 
+                            SET object_type = EXCLUDED.object_type, 
+                                sent_dttm  = EXCLUDED.sent_dttm, 
+                                payload  = EXCLUDED.payload;
                     """,
                     {
                         'object_id': object_id,

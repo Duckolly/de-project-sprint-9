@@ -1,100 +1,89 @@
-import time
-import json
+from datetime import datetime
+from stg_loader.repository.stg_repository import StgRepository
+from lib.redis.redis_client import RedisClient
 from lib.kafka_connect.kafka_connectors import KafkaConsumer
 from lib.kafka_connect.kafka_connectors import KafkaProducer
-from stg_loader.repository.stg_repository import StgRepository 
-from lib.redis.redis_client import RedisClient
-from datetime import datetime
+from lib.pg import PgConnect
 from logging import Logger
-
+import json
 
 class StgMessageProcessor:
-    def __init__ (self,
-                  consumer: KafkaConsumer,
-                  producer: KafkaProducer,
-                  redis: RedisClient,
-                  stg_repository: StgRepository,
-                  batch_size: int,
-                  logger: Logger) -> None:
-
-        self._consumer = consumer 
-        self._producer = producer 
-        self._redis = redis 
-        self._stg_repository = stg_repository 
+    def __init__(self, consumer: KafkaConsumer, producer: KafkaProducer, redis_client: RedisClient, pg_connect: PgConnect, batch_size: int, logger: Logger) -> None:
+        self._consumer = consumer
+        self._producer = producer
+        self._redis = redis_client
+        self._pg_connect = pg_connect
         self._batch_size = batch_size
-        self._logger = logger 
-
-
+        self._logger = logger
+        
     def run(self) -> None:
-        self._logger.info(f"{datetime.utcnow()}: START")
+        self._logger.debug(f"{datetime.utcnow()}: START")
+
+        stg_repository = StgRepository(self._pg_connect)
 
         for _ in range(self._batch_size):
             msg = self._consumer.consume()
             if not msg:
                 break
 
-            self._logger.info(f"{datetime.utcnow()}: Message received")
+            self._process_message(msg, stg_repository)
 
-            order = msg['payload']
-            self._stg_repository.order_events_insert(
-                msg["object_id"],
-                msg["object_type"],
-                msg["sent_dttm"],
-                json.dumps(order))
+        self._logger.debug(f"{datetime.utcnow()}: BATCH FINISHED PROCESSING")
 
-            user_id = order["user"]["id"]
-            user = self._redis.get(user_id)
-            user_name = user["name"]
-            
-            restaurant_id = order['restaurant']['id']
-            restaurant = self._redis.get(restaurant_id)
-            restaurant_name = restaurant["name"]
-            
-            dst_msg = {
-                "object_id": msg["object_id"],
-                "object_type": "order",
-                "payload": {
-                    "id": msg["object_id"],
-                    "date": order["date"],
-                    "cost": order["cost"],
-                    "payment": order["payment"],
-                    "status": order["final_status"],
-                    "restaurant": self._format_restaurant(restaurant_id, restaurant_name),
-                    "user": self._format_user(user_id, user_name),
-                    "products": self._format_items(order["order_items"], restaurant)
-                }
+    def _process_message(self, msg: dict, stg_repository: StgRepository) -> None:
+        self._logger.info(f"\n======\n======--- MESSAGE with contents:\n{msg}\n======\n======\n")
+        payload = msg['payload']
+        products = payload.get('order_items', [])
+
+        stg_repository.order_events_insert(str(msg['object_id']), str(msg['object_type']), str(datetime.now()), json.dumps(payload))
+        self._logger.info(f"\n======\n======--- MESSAGE WRITTEN TO DB ---======\n======\n")
+
+        user_name = self._redis.get(payload['user']['id']).get('name', '')
+        user_login = self._redis.get(payload['user']['id']).get('login', '')
+        rest_msg = self._redis.get(payload['restaurant']['id'])
+        
+        menu = rest_msg.get('menu', [])
+        out_msg = {
+            "object_id": msg['object_id'],
+            "object_type": msg['object_type'],
+            "payload": {
+                "id": msg['object_id'],
+                "date": payload.get('date', ''),
+                "cost": payload.get('cost', ''),
+                "payment": payload.get('payment', ''),
+                "status": payload.get('final_status', ''),
+                "restaurant": {
+                    "id": payload['restaurant'].get('id', ''),
+                    "name": rest_msg.get('name', '')
+                },
+                "user": {
+                    "id": payload['user'].get('id', ''),
+                    "name": user_name,
+                    "login": user_login
+                },
+                "products": self._process_products(products, menu)
+            }
+        }        
+
+        self._producer.produce(out_msg)
+        self._logger.info(f"\n======\n======--- DETAILED MESSAGE PRODUCED ---======\n======\n")
+
+
+    def _process_products(self, products: list, menu: list) -> list:
+        result = []
+        for prdct in products:
+            product_info = {
+                "id": prdct.get('id', ''),
+                "price": prdct.get('price', ''),
+                "quantity": prdct.get('quantity', ''),
+                "name": prdct.get('name', '')
             }
 
-            self._producer.produce(dst_msg)
-            self._logger.info(f"{datetime.utcnow()}. Message Sent")
+            for items in menu:
+                if items.get('_id', '') == prdct.get('id', ''):
+                    product_info["category"] = items.get('category', '')
+                    break
 
-        self._logger.info(f"{datetime.utcnow()}: FINISH")
+            result.append(product_info)
 
-    def _format_restaurant(self, id, name) -> dict[str, str]:
-        return {
-            "id": id,
-            "name": name
-        }
-
-    def _format_user(self, id, name) -> dict[str, str]:
-        return {
-            "id": id,
-            "name": name
-        }
-
-    def _format_items(self, order_items, restaurant) -> list[dict[str, str]]:
-        items = []
-
-        menu = restaurant["menu"]
-        for it in order_items:
-            menu_item = next(x for x in menu if x["_id"] == it["id"])
-            dst_it = {
-                "id": it["id"],
-                "price": it["price"],
-                "quantity": it["quantity"],
-                "name": menu_item["name"],
-                "category": menu_item["category"]
-            }
-            items.append(dst_it)
-
-        return items
+        return result
