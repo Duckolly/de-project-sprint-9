@@ -56,8 +56,8 @@ class DdsMessageProcessor:
             self._logger.info(f"\n******\n Сообщение о продуктах со структурой: \n{dest_msg_product}\n******\n")
             dest_msg_category = dds_builder.cdm_category_msg()
             self._logger.info(f"\n******\n Сообщение о категириях со структурой: \n{dest_msg_category}\n******\n")
-            self._producer.produce(dest_msg_product + dest_msg_category) # uniting products and categories to be produced as one message
-            self._logger.info(f"\n****** MESSAGES PRODUCED ******\n")
+            self._producer.produce(dest_msg_product + dest_msg_category)
+            self._logger.info(f"\n****** СООБЩЕНИЯ ЗАПИСАНЫ ******\n")
 
         self._logger.info(f"{datetime.utcnow()}: FINISH")
 

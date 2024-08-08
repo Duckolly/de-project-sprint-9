@@ -1,26 +1,27 @@
 import logging
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
-
 from app_config import AppConfig
 from dds_loader.dds_message_processor_job import DdsMessageProcessor
+from dotenv import load_dotenv
+# Загрузка переменных окружения из файла .env
+load_dotenv()
 
 app = Flask(__name__)
 
-config = AppConfig()
+
+@app.get('/health')
+def hello_world():
+    return 'healthy'
+
 
 if __name__ == '__main__':
     app.logger.setLevel(logging.DEBUG)
-
-    migrator = DdsMigrator(config.pg_warehouse_db())
-    migrator.up()
+    
+    config = AppConfig()
 
     proc = DdsMessageProcessor(
-        config.kafka_consumer(),
-        config.kafka_producer(),
-        DdsRepository(config.pg_warehouse_db()),
-        app.logger
+        config.kafka_consumer(), config.kafka_producer(), config.pg_warehouse_db(), config.batch_size, app.logger
     )
 
     scheduler = BackgroundScheduler()
