@@ -3,120 +3,121 @@ from typing import Dict, List
 from lib.pg import PgConnect
 from psycopg import Cursor
 
-class DataRepository:
-    def __init__(self, database: PgConnect, logger):
-        self._database = database
+class CdmRepository:
+    def __init__(self, db: PgConnect, logger):
+        self._db = db
         self._logger = logger  
 
-    def store_messages(self, messages: List[Dict]):
-        with self._database.connection() as connection:
-            with connection.cursor() as cursor:
+    def save_message(self, message: List[Dict]):
+        with self._db.connection() as conn:
+            with conn.cursor() as cur:
                 try:
-                    self._initialize_temp_tables(cursor)
-                    self._populate_temp_tables(cursor, messages)
-                    self._logger.info("******\nЗагрузка временной таблицы******\n")
-                    self._insert_into_data_marts(cursor)
-                    self._logger.info("******\nЗагрузка завершена******\n")
-                except Exception as error:
-                    self._logger.error(f"Произошла ошибка: {error}")
+                    self.__create_temp_table(cur)
+                    self.__load_temp_table(cur, message)
+                    self._logger.info(f"\n======\n======\nTEMP TABLE LOADED\n======\n======\n")
+                    self.__load_data_marts(cur)
+                    self._logger.info(f"\n======\n======\nDM LOADED\n======\n======\n")
+                except Exception as e:
+                    self._logger.error(f"An error occurred: {e}")
                 finally:
-                    cursor.execute("DROP TABLE IF EXISTS temp_product_table;")
-                    cursor.execute("DROP TABLE IF EXISTS temp_category_table;")
+                    cur.execute(f"DROP TABLE IF EXISTS temp_table_prod;")
+                    cur.execute(f"DROP TABLE IF EXISTS temp_table_cat;")
 
-    def _initialize_temp_tables(self, cursor: Cursor):
-        cursor.execute(
-            """
-                CREATE TEMP TABLE temp_product_table
+    def __create_temp_table(self, cur: Cursor):
+        cur.execute(
+            f"""
+                CREATE TEMP TABLE temp_table_prod
                 (
                     user_id         VARCHAR,
                     product_id      VARCHAR,
                     product_name    VARCHAR,
-                    order_count     INT
+                    order_cnt       INT
                 )
-                ON COMMIT DROP;
+                    ON COMMIT DROP;
             """
         )
-        cursor.execute(
-            """
-                CREATE TEMP TABLE temp_category_table
+        cur.execute(
+            f"""
+                CREATE TEMP TABLE temp_table_cat
                 (
                     user_id         VARCHAR,
                     category_id     VARCHAR,
                     category_name   VARCHAR,
-                    order_count     INT
+                    order_cnt       INT
                 )
-                ON COMMIT DROP;
+                    ON COMMIT DROP;
             """
         )
 
-    def _populate_temp_tables(self, cursor: Cursor, records: List[Dict]):
-        for record in records:
-            if record['object_type'] == 'user_prod':
-                cursor.execute(
+    def __load_temp_table(self, cur: Cursor, stats: List[Dict]):
+        for each in stats:
+            if each['object_type'] == 'user_prod':
+                cur.execute(
                     """
-                        INSERT INTO temp_product_table (user_id, product_id, product_name, order_count)
+                        INSERT INTO temp_table_prod (user_id, product_id, product_name, order_cnt)
                         VALUES 
                         (
                             %(user_id)s,
                             %(product_id)s,
                             %(product_name)s,
-                            %(order_count)s
+                            %(order_cnt)s
                         );
                     """,
                     {
-                        'user_id': record['payload']['user_id'],
-                        'product_id': record['payload']['product_id'],
-                        'product_name': record['payload']['product_name'],
-                        'order_count': int(record['payload']['order_cnt'])
+                        'user_id': each['payload']['user_id'],
+                        'product_id': each['payload']['product_id'] if each['object_type'] == 'user_prod' else '',
+                        'product_name': each['payload']['product_name'] if each['object_type'] == 'user_prod' else '',
+                        'order_cnt': int(each['payload']['order_cnt'])
                     }
                 )
-            elif record['object_type'] == 'user_categ':
-                cursor.execute(
+            elif each['object_type'] == 'user_categ':
+                cur.execute(
                     """
-                        INSERT INTO temp_category_table (user_id, category_id, category_name, order_count)
+                        INSERT INTO temp_table_cat (user_id, category_id, category_name, order_cnt)
                         VALUES 
                         (
                             %(user_id)s,
                             %(category_id)s,
                             %(category_name)s,
-                            %(order_count)s
+                            %(order_cnt)s
                         );
                     """,
                     {
-                        'user_id': record['payload']['user_id'],
-                        'category_id': record['payload']['category_id'],
-                        'category_name': record['payload']['category_name'],
-                        'order_count': int(record['payload']['order_cnt'])
+                        'user_id': each['payload']['user_id'],
+                        'category_id': each['payload']['category_id'] if each['object_type'] == 'user_categ' else '',
+                        'category_name': each['payload']['category_name'] if each['object_type'] == 'user_categ' else '',
+                        'order_cnt': int(each['payload']['order_cnt'])
                     }
                 )
 
-    def _insert_into_data_marts(self, cursor: Cursor):
-        cursor.execute(
-            """
-                INSERT INTO cdm.user_product_counters (user_id, product_id, product_name, order_count)
-                SELECT  tt.user_id, 
-                        tt.product_id, 
-                        tt.product_name, 
-                        SUM(tt.order_count)
-                FROM temp_product_table AS tt
+
+    def __load_data_marts(self, cur: Cursor):
+        cur.execute(
+            f"""
+                INSERT INTO cdm.user_product_counters (user_id, product_id, product_name, order_cnt)
+                SELECT  tt.user_id          AS user_id, 
+                        tt.product_id       AS product_id, 
+                        tt.product_name     AS product_name, 
+                        SUM(tt.order_cnt)   AS order_cnt
+                FROM temp_table_prod AS tt
                 GROUP BY user_id, product_id, product_name
                 ON CONFLICT (user_id, product_id) DO UPDATE 
                 SET product_name = EXCLUDED.product_name,
-                    order_count = EXCLUDED.order_count;
+                    order_cnt = EXCLUDED.order_cnt;
             """
         )
 
-        cursor.execute(
-            """
-                INSERT INTO cdm.user_category_counters (user_id, category_id, category_name, order_count) 
-                SELECT  tt.user_id, 
-                        tt.category_id, 
-                        tt.category_name, 
-                        SUM(tt.order_count)
-                FROM temp_category_table AS tt
+        cur.execute(
+            f"""
+                INSERT INTO cdm.user_category_counters (user_id, category_id, category_name, order_cnt) 
+                SELECT  tt.user_id          AS user_id, 
+                        tt.category_id       AS category_id, 
+                        tt.category_name     AS category_name, 
+                        SUM(tt.order_cnt)   AS order_cnt
+                FROM temp_table_cat AS tt
                 GROUP BY user_id, category_id, category_name
                 ON CONFLICT (user_id, category_id) DO UPDATE 
                 SET category_name = EXCLUDED.category_name,
-                    order_count = EXCLUDED.order_count;
+                    order_cnt = EXCLUDED.order_cnt;
             """
         )

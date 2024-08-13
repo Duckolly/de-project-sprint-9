@@ -10,7 +10,7 @@ def error_callback(err):
 
 class KafkaProducer:
     def __init__(self, host: str, port: int, user: str, password: str, topic: str, cert_path: str) -> None:
-        params = {
+        self.params = {
             'bootstrap.servers': f'{host}:{port}',
             'security.protocol': 'SASL_SSL',
             'ssl.ca.location': cert_path,
@@ -21,7 +21,7 @@ class KafkaProducer:
         }
 
         self.topic = topic
-        self.p = Producer(params)
+        self.p = Producer(self.params)
 
     def produce(self, payload: Dict) -> None:
         self.p.produce(self.topic, json.dumps(payload))
@@ -45,7 +45,7 @@ class KafkaConsumer:
             'sasl.mechanism': 'SCRAM-SHA-512',
             'sasl.username': user,
             'sasl.password': password,
-            'group.id': group,  # '',
+            'group.id': group,  
             'auto.offset.reset': 'earliest',
             'enable.auto.commit': False,
             'error_cb': error_callback,

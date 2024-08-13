@@ -17,7 +17,7 @@ class StgMessageProcessor:
         self._logger = logger
         
     def run(self) -> None:
-        self._logger.debug(f"{datetime.utcnow()}: START")
+        self._logger.debug(f"{datetime.now()}: START")
 
         stg_repository = StgRepository(self._pg_connect)
 
@@ -28,7 +28,7 @@ class StgMessageProcessor:
 
             self._process_message(msg, stg_repository)
 
-        self._logger.debug(f"{datetime.utcnow()}: BATCH FINISHED PROCESSING")
+        self._logger.debug(f"{datetime.now()}: BATCH FINISHED PROCESSING")
 
     def _process_message(self, msg: dict, stg_repository: StgRepository) -> None:
         self._logger.info(f"\n======\n======--- MESSAGE with contents:\n{msg}\n======\n======\n")

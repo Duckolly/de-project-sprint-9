@@ -6,45 +6,45 @@ from pydantic import BaseModel
 from logging import Logger
 
 
-class h_user(BaseModel):
+class H_User(BaseModel):
     h_user_pk: uuid.UUID
     user_id: str
     load_dt: datetime
     load_src: str
 
-class h_product(BaseModel):
+class H_Product(BaseModel):
     h_product_pk: uuid.UUID
     product_id: str
     load_dt: datetime
     load_src: str 
 
-class h_category(BaseModel):
+class H_Category(BaseModel):
     h_category_pk : uuid.UUID
     category_name: str
     load_dt: datetime
     load_src: str
 
-class h_restaurant(BaseModel):
+class H_Restaurant(BaseModel):
     h_restaurant_pk : uuid.UUID
     restaurant_id: str
     load_dt : datetime
     load_src: str
 
-class h_order(BaseModel):
+class H_Order(BaseModel):
     h_order_pk : uuid.UUID
     order_id : str
     order_dt : str   
     load_dt : datetime
     load_src : str
 
-class s_order_status(BaseModel):
+class S_Order_Status(BaseModel):
     h_order_pk : uuid.UUID
     status:str
     load_dt:datetime
     load_src:str
     hk_order_status_hashdiff:str   
 
-class s_order_cost(BaseModel):
+class S_Order_Cost(BaseModel):
     h_order_pk : uuid.UUID
     cost:float
     payment:float
@@ -52,21 +52,21 @@ class s_order_cost(BaseModel):
     load_src:str
     hk_order_cost_hashdiff:str 
 
-class s_product_names(BaseModel):
+class S_Product_Names(BaseModel):
     h_product_pk : uuid.UUID
     name:str
     load_dt:datetime
     load_src:str
     hk_product_names_hashdiff:str
 
-class s_restaurant_names(BaseModel):
+class S_Restaurant_Names(BaseModel):
     h_restaurant_pk : uuid.UUID
     name:str
     load_dt:datetime
     load_src:str
     hk_restaurant_names_hashdiff:str
 
-class s_user_names(BaseModel):
+class S_User_Names(BaseModel):
     h_user_pk: uuid.UUID
     username: str
     userlogin: str
@@ -74,14 +74,14 @@ class s_user_names(BaseModel):
     load_src: str
     hk_user_names_hashdiff  : str
 
-class l_product_restaurant(BaseModel):
+class L_Product_Restaurant(BaseModel):
     hk_product_restaurant_pk : uuid.UUID
     h_restaurant_pk : uuid.UUID
     h_product_pk : uuid.UUID
     load_dt: datetime
     load_src: str
 
-class l_order_product(BaseModel):
+class L_Order_Product(BaseModel):
     hk_order_product_pk : uuid.UUID
     h_order_pk : uuid.UUID
     h_product_pk : uuid.UUID
@@ -89,14 +89,14 @@ class l_order_product(BaseModel):
     load_src: str
     
 
-class l_order_user(BaseModel):
+class L_Order_User(BaseModel):
     hk_order_user_pk : uuid.UUID
     h_order_pk : uuid.UUID
     h_user_pk : uuid.UUID
     load_dt: datetime
     load_src: str
 
-class l_product_category(BaseModel):
+class L_Product_Category(BaseModel):
     hk_product_category_pk : uuid.UUID
     h_product_pk : uuid.UUID
     h_category_pk : uuid.UUID
@@ -115,21 +115,21 @@ class OrderDdsBuilder:
     def _uuid(self, obj: Any) -> uuid.UUID:
         return uuid.uuid5(namespace=self.order_ns_uuid, name=str(obj))
     
-    def h_user(self) -> h_user:
+    def h_user(self) -> H_User:
         user_id = str(self._dict['user']['id'])
-        return h_user(
+        return H_User(
             h_user_pk=self._uuid(user_id),
             user_id=user_id,
             load_dt=datetime.utcnow(),
             load_src=self.source_system
         )
     
-    def h_product(self) -> List[h_product]:
+    def h_product(self) -> List[H_Product]:
         products = []
         for prod_dict in self._dict['products']:
             prod_id = prod_dict['id']
             products.append(
-                h_product(
+                H_Product(
                     h_product_pk=self._uuid(prod_id),
                     product_id=prod_id,
                     load_dt=datetime.utcnow(),
@@ -138,9 +138,9 @@ class OrderDdsBuilder:
             )
         return products
      
-    def h_restaurant(self) -> h_restaurant:
+    def h_restaurant(self) -> H_Restaurant:
         restaurant_id = str(self._dict['restaurant']['id'])
-        return h_restaurant(
+        return H_Restaurant(
             h_restaurant_pk=self._uuid(restaurant_id),
             restaurant_id=restaurant_id,
             name=self._dict['restaurant']['name'],
@@ -148,9 +148,9 @@ class OrderDdsBuilder:
             load_src=self.source_system
         )
     
-    def h_order(self) -> h_order:
+    def h_order(self) -> H_Order:
         order_id = str(self._dict['id'])
-        return h_order(
+        return H_Order(
             h_order_pk=self._uuid(order_id),
             order_id=order_id,
             order_dt=self._dict['date'],
@@ -158,12 +158,12 @@ class OrderDdsBuilder:
             load_src=self.source_system
         )
 
-    def h_category(self) -> List[h_category]:
+    def h_category(self) -> List[H_Category]:
         categories = []
         for prod_dict in self._dict['products']:
             category_name = prod_dict["category"]
             categories.append(
-                h_category(
+                H_Category(
                     h_category_pk=self._uuid(category_name),
                     category_name=category_name,
                     load_dt=datetime.utcnow(),
@@ -171,8 +171,8 @@ class OrderDdsBuilder:
                 )
             )
         return categories
-    def s_order_status(self) -> s_order_status:
-        return s_order_status(
+    def s_order_status(self) -> S_Order_Status:
+        return S_Order_Status(
             h_order_pk=self._uuid(self._dict["id"]),
             status=self._dict["status"],
             load_dt=datetime.utcnow(),
@@ -180,8 +180,8 @@ class OrderDdsBuilder:
             hk_order_status_hashdiff=str(self._uuid([self._dict["id"],self._dict["status"]]))
         )
     
-    def s_order_cost(self) -> s_order_cost:
-        return s_order_cost(
+    def s_order_cost(self) -> S_Order_Cost:
+        return S_Order_Cost(
             h_order_pk=self._uuid(self._dict["id"]),
             cost=self._dict["cost"],
             payment=self._dict["payment"],
@@ -190,12 +190,12 @@ class OrderDdsBuilder:
             hk_order_cost_hashdiff=str(self._uuid([self._dict["id"],self._dict["cost"], self._dict["payment"]]))
         )
     
-    def s_product_names(self) -> List[s_product_names]:
+    def s_product_names(self) -> List[S_Product_Names]:
         pnames = []
         for prod_dict in self._dict['products']:
             prod_id = prod_dict['id']
             pnames.append(
-                s_product_names(
+                S_Product_Names(
                     h_product_pk=self._uuid(prod_id),
                     name=prod_dict['name'],
                     load_dt=datetime.utcnow(),
@@ -205,9 +205,9 @@ class OrderDdsBuilder:
             )
         return pnames
 
-    def s_restaurant_names(self) -> s_restaurant_names:
+    def s_restaurant_names(self) -> S_Restaurant_Names:
         rest = self._dict["restaurant"]
-        return s_restaurant_names(
+        return S_Restaurant_Names(
             h_restaurant_pk=self._uuid(rest["id"]),
             name=rest["name"],
             load_dt=datetime.utcnow(),
@@ -215,9 +215,9 @@ class OrderDdsBuilder:
             hk_restaurant_names_hashdiff=str(self._uuid([ rest["id"], rest["name"] ]))
         )
 
-    def s_user_names(self) -> s_user_names:
+    def s_user_names(self) -> S_User_Names:
         usr = self._dict["user"]
-        return s_user_names(
+        return S_User_Names(
             h_user_pk=self._uuid(usr["id"]),
             username=usr["name"],
             userlogin=usr["login"],
@@ -226,14 +226,14 @@ class OrderDdsBuilder:
             hk_user_names_hashdiff=str(self._uuid([ usr["id"], usr["name"], usr["login"]]))
         )
     
-    def l_product_restaurant(self) -> List[l_product_restaurant]:
+    def l_product_restaurant(self) -> List[L_Product_Restaurant]:
         h_restaurant_pk = self._uuid(self._dict["restaurant"]["id"])
         l_pr = []
         for prod_dict in self._dict['products']:
             prod_id = prod_dict['id']
             h_product_pk = self._uuid(prod_id)
             l_pr.append(
-                l_product_restaurant(
+                L_Product_Restaurant(
                     hk_product_restaurant_pk=str(self._uuid([ h_product_pk, h_restaurant_pk ])),
                     h_product_pk=h_product_pk,
                     h_restaurant_pk = h_restaurant_pk,
@@ -243,14 +243,14 @@ class OrderDdsBuilder:
             )
         return l_pr
 
-    def l_order_product(self) -> List[l_order_product]:
+    def l_order_product(self) -> List[L_Order_Product]:
         h_order_pk = self._uuid(self._dict["id"])
         l_op = []
         for prod_dict in self._dict['products']:
             prod_id = prod_dict['id']
             h_product_pk = self._uuid(prod_id)
             l_op.append(
-                l_order_product(
+                L_Order_Product(
                     hk_order_product_pk=str(self._uuid([ h_product_pk, h_order_pk ])),
                     h_product_pk=h_product_pk,
                     h_order_pk = h_order_pk,
@@ -260,10 +260,10 @@ class OrderDdsBuilder:
             )
         return l_op
 
-    def l_order_user(self) -> l_order_user:
+    def l_order_user(self) -> L_Order_User:
         h_order_pk = self._uuid(self._dict["id"])
         h_user_pk = self._uuid(self._dict["user"]["id"])
-        return l_order_user(
+        return L_Order_User(
             hk_order_user_pk = str(self._uuid([h_order_pk, h_user_pk])),
             h_order_pk = h_order_pk,
             h_user_pk = h_user_pk,
@@ -271,14 +271,14 @@ class OrderDdsBuilder:
             load_src=self.source_system
         )
 
-    def l_product_category(self) -> List[l_product_category]:
+    def l_product_category(self) -> List[L_Product_Category]:
         l_pc = []
         for prod_dict in self._dict['products']:
             prod_id = prod_dict['id']
             h_product_pk = self._uuid(prod_id)
             h_category_pk = self._uuid(prod_dict['category'])
             l_pc.append(
-                l_product_category(
+                L_Product_Category(
                     hk_product_category_pk=str(self._uuid([ h_product_pk, h_category_pk ])),
                     h_product_pk=h_product_pk,
                     h_category_pk = h_category_pk,
@@ -288,7 +288,7 @@ class OrderDdsBuilder:
             )
         return l_pc
     
-    def cdm_product_msg(self) -> List[Dict]:
+    def cdm_prd_msg(self) -> List[Dict]:
         msg = []
         for prod_dict in self._dict['products']:
             prd_msg = {}
@@ -303,7 +303,7 @@ class OrderDdsBuilder:
             msg.append(prd_msg)
         return msg
     
-    def cdm_category_msg(self) -> List[Dict]:
+    def cdm_categ_msg(self) -> List[Dict]:
         msg = []
         for prod_dict in self._dict['products']:
             prd_msg = {}
@@ -322,7 +322,7 @@ class DdsRepository:
     def __init__(self, db: PgConnect) -> None:
         self._db = db
 
-    def h_user_insert(self, user: h_user) -> None:
+    def h_user_insert(self, user: H_User) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -349,7 +349,7 @@ class DdsRepository:
                     }
                 )
 
-    def s_user_names_insert(self, user: s_user_names) -> None:
+    def s_user_names_insert(self, user: S_User_Names) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -381,7 +381,7 @@ class DdsRepository:
 
         
     
-    def h_order_insert(self, obj: h_order) -> None:
+    def h_order_insert(self, obj: H_Order) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -411,7 +411,7 @@ class DdsRepository:
                     }
                 ) 
 
-    def s_order_cost_insert(self, obj: s_order_cost) -> None:
+    def s_order_cost_insert(self, obj: S_Order_Cost) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -445,7 +445,7 @@ class DdsRepository:
                 ) 
 
 
-    def s_order_status_insert(self, obj: s_order_status) -> None:
+    def s_order_status_insert(self, obj: S_Order_Status) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -475,7 +475,7 @@ class DdsRepository:
                     }
                 ) 
 
-    def l_order_user_insert(self, obj: l_order_user) -> None:
+    def l_order_user_insert(self, obj: L_Order_User) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -506,7 +506,7 @@ class DdsRepository:
                 )
 
 
-    def h_product_insert(self, obj: List[h_product]) -> None:
+    def h_product_insert(self, obj: List[H_Product]) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 for each in obj:
@@ -534,7 +534,7 @@ class DdsRepository:
                         }
                     ) 
 
-    def s_product_names_insert(self, obj: List[s_product_names]) -> None:
+    def s_product_names_insert(self, obj: List[S_Product_Names]) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 for each in obj:
@@ -566,7 +566,7 @@ class DdsRepository:
                     ) 
 
 
-    def l_order_product_insert(self, obj: l_order_product) -> None:
+    def l_order_product_insert(self, obj: L_Order_Product) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 for each in obj:
@@ -597,7 +597,7 @@ class DdsRepository:
                         }
                     )
 
-    def h_restaurant_insert(self, obj: h_restaurant) -> None:
+    def h_restaurant_insert(self, obj: H_Restaurant) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -624,7 +624,7 @@ class DdsRepository:
                     }
                 ) 
 
-    def s_restaurant_names_insert(self, obj: s_restaurant_names) -> None:
+    def s_restaurant_names_insert(self, obj: S_Restaurant_Names) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -656,7 +656,7 @@ class DdsRepository:
 
 
 
-    def l_product_restaurant_insert(self, obj: l_product_restaurant) -> None:
+    def l_product_restaurant_insert(self, obj: L_Product_Restaurant) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 for each in obj:
@@ -687,7 +687,7 @@ class DdsRepository:
                         }
                     )
 
-    def h_category_insert(self, obj: List[h_category]) -> None:
+    def h_category_insert(self, obj: List[H_Category]) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 for each in obj:
@@ -715,7 +715,7 @@ class DdsRepository:
                         }
                     ) 
 
-    def l_product_category_insert(self, obj: l_product_category) -> None:
+    def l_product_category_insert(self, obj: L_Product_Category) -> None:
         with self._db.connection() as conn:
             with conn.cursor() as cur:
                 for each in obj:

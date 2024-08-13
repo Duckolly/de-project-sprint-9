@@ -1,1 +1,1 @@
-from lib.redis.redis_client import RedisClient  # noqa
+from lib.redis.redis_client import RedisClient

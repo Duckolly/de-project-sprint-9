@@ -1,10 +1,12 @@
 import logging
+from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from app_config import AppConfig
 from cdm_loader.cdm_message_processor_job import CdmMessageProcessor
-from dotenv import load_dotenv
-# Загрузка переменных окружения из файла .env
+
+
+
 load_dotenv()
 
 app = Flask(__name__)

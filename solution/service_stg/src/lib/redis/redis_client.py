@@ -1,5 +1,5 @@
 import json
-from typing import Dict
+from typing import Dict, List
 
 import redis
 
@@ -11,11 +11,16 @@ class RedisClient:
             port=port,
             password=password,
             ssl=True,
-            ssl_ca_certs=cert_path)
+            ssl_ca_certs=cert_path
+        )
 
-    def set(self, k, v):
+    def set(self, k, v) -> None:
         self._client.set(k, json.dumps(v))
 
     def get(self, k) -> Dict:
-        obj: str = self._client.get(k)  # type: ignore
+        obj: str = self._client.get(k)
         return json.loads(obj)
+    
+    def mget(self, *keys: str) -> List:
+        values = self._client.mget(keys)
+        return list(map(json.loads, values))

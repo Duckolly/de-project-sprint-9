@@ -1,0 +1,17 @@
+{
+    "name": "YandexCloud DevEvironment",
+    "dockerComposeFile": "docker-compose-dev.yml",
+    "service": "dev",
+    "workspaceFolder": "/app",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.autopep8",
+                "Codeium.codeium",
+                "ms-python.vscode-pylance",
+                "ms-python.python",
+                "ms-python.debugpy"
+            ]
+        }
+    }
+}

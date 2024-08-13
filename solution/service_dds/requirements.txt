@@ -1,6 +1,9 @@
-APScheduler
-confluent_kafka
-flask
-psycopg
-psycopg-binary
-pydantic
+asyncio==3.4.3
+apscheduler==3.10.4
+confluent_kafka==2.5.0
+flask==3.0.3
+psycopg-binary==3.2.1
+psycopg==3.2.1
+pydantic==2.8.2
+python-dotenv==1.0.1
+redis==5.0.8
